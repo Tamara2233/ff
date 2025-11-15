@@ -1,152 +1,122 @@
+gh repo create realtime-russian-chat --public --clone && cd realtime-russian-chat && echo '
+// =========================
+//  ONE-FILE REALTIME CHAT
+//  EVERYTHING TRANSLATED TO RUSSIAN
+//  RUN:  node server.js
+// =========================
+
+const http = require("http");
+const fs = require("fs");
+const fetch = require("node-fetch");
+let clients = [];
+
+const HTML = \`
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ты чудо 💖</title>
+<meta charset="UTF-8" />
+<title>Чат (всё переводится на русский)</title>
 <style>
-  body {
-    margin: 0;
-    background: black;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
-
-  button {
-    position: absolute;
-    background: white;
-    color: black;
-    border: none;
-    padding: 20px 40px;
-    font-size: 24px;
-    cursor: pointer;
-    border-radius: 10px;
-    transition: 0.3s;
-  }
-
-  button:hover {
-    background: #e0e0e0;
-  }
-
-  canvas {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-
-  .message {
-    position: absolute;
-    font-size: 30px;
-    font-weight: bold;
-    opacity: 0;
-    background: linear-gradient(90deg, red, orange, yellow, green, cyan, blue, violet);
-    background-size: 400%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 20px rgba(255,255,255,0.3);
-    animation: rainbow 4s linear infinite, appear 4s ease-out forwards;
-    pointer-events: none;
-  }
-
-  @keyframes rainbow {
-    0% { background-position: 0% }
-    100% { background-position: 400% }
-  }
-
-  @keyframes appear {
-    0% { opacity: 0; transform: scale(0.2) rotate(-10deg); filter: blur(8px); }
-    40% { opacity: 1; transform: scale(1.2) rotate(5deg); filter: blur(0); }
-    70% { transform: scale(1) rotate(0deg); }
-    100% { opacity: 0; transform: scale(0.8) rotate(0deg); filter: blur(6px); }
-  }
+body { font-family: Arial; background:#f3f3f3; margin:0; }
+#chat { max-width:700px; margin:0 auto; padding:20px; }
+#messages { height:400px; background:white; padding:10px; overflow-y:auto; border:1px solid #ccc; }
+.msg { margin-bottom:10px; padding:5px 8px; background:#eef; border-radius:5px; }
+small { color:#666; }
+#inputBox { display:flex; margin-top:10px; gap:5px; }
+input { flex:1; padding:8px; }
+button { padding:8px 14px; }
+#nick { margin-bottom:10px; width:100%; padding:8px; }
 </style>
 </head>
 <body>
-  <button id="startBtn">Нажми меня</button>
-  <canvas id="canvas"></canvas>
-  <div class="message" id="message">Ты чудо 💖</div>
+<div id="chat">
+<h2>Общий чат (всё переводится на русский)</h2>
+
+<input id="nick" placeholder="Ваш ник (необязательно)">
+
+<div id="messages"></div>
+
+<div id="inputBox">
+<input id="msg" placeholder="Введите сообщение..." />
+<button onclick="send()">Отправить</button>
+</div>
+</div>
 
 <script>
-const button = document.getElementById('startBtn');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const message = document.getElementById('message');
-let particles = [];
+const ws = new WebSocket("ws://" + location.host);
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+ws.onmessage = (ev) => {
+    let m = JSON.parse(ev.data);
+    let box = document.getElementById("messages");
+    box.innerHTML += "<div class='msg'><b>" + m.user + ":</b> " + m.text +
+                     "<br><small>Оригинал: " + m.original + "</small></div>";
+    box.scrollTop = box.scrollHeight;
+};
+
+function send() {
+    let msg = document.getElementById("msg").value.trim();
+    if (!msg) return;
+    let nick = document.getElementById("nick").value.trim() || "Anonymous";
+    ws.send(JSON.stringify({ user: nick, text: msg }));
+    document.getElementById("msg").value = "";
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
-
-class Particle {
-  constructor(x, y, color, angle, speed) {
-    this.x = x;
-    this.y = y;
-    this.color = color;
-    this.angle = angle;
-    this.speed = speed;
-    this.life = 100;
-  }
-  update() {
-    const rad = this.angle * Math.PI / 180;
-    this.x += Math.cos(rad) * this.speed;
-    this.y += Math.sin(rad) * this.speed;
-    this.speed *= 0.95;
-    this.life--;
-  }
-  draw() {
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-function drawHeartExplosion(x, y) {
-  const colors = ['#ff4b5c','#ff9a00','#ffee00','#4aff00','#00ffe7','#007bff','#a700ff'];
-  const heartPoints = [];
-  for (let t = 0; t < Math.PI * 2; t += 0.05) {
-    const hx = 16 * Math.pow(Math.sin(t), 3);
-    const hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-    heartPoints.push({x: hx, y: hy});
-  }
-  heartPoints.forEach(p => {
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const px = x + p.x * 15;
-    const py = y + p.y * 15;
-    const angle = Math.random() * 360;
-    const speed = Math.random() * 3 + 1;
-    particles.push(new Particle(px, py, color, angle, speed));
-  });
-}
-
-function animate() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  particles.forEach((p, i) => {
-    p.update();
-    p.draw();
-    if (p.life <= 0) particles.splice(i, 1);
-  });
-  if (particles.length > 0) {
-    requestAnimationFrame(animate);
-  } else {
-    message.style.display = 'block';
-    message.style.opacity = 1;
-  }
-}
-
-button.addEventListener('click', () => {
-  button.style.display = 'none';
-  canvas.style.display = 'block';
-  drawHeartExplosion(window.innerWidth / 2, window.innerHeight / 2);
-  animate();
-});
 </script>
+
 </body>
 </html>
+\`;
+
+async function translateToRussian(text) {
+    try {
+        const res = await fetch("https://libretranslate.com/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                q: text,
+                source: "auto",
+                target: "ru",
+                format: "text"
+            })
+        });
+        const json = await res.json();
+        return json.translatedText || text;
+    } catch {
+        return text;
+    }
+}
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/html" });
+    res.end(HTML);
+});
+
+const WebSocket = require("ws");
+const wss = new WebSocket.Server({ server });
+
+wss.on("connection", (ws) => {
+    clients.push(ws);
+
+    ws.on("message", async (data) => {
+        const msg = JSON.parse(data.toString());
+        const translated = await translateToRussian(msg.text);
+
+        const payload = JSON.stringify({
+            user: msg.user,
+            original: msg.text,
+            text: translated
+        });
+
+        clients.forEach(c => {
+            if (c.readyState === WebSocket.OPEN) c.send(payload);
+        });
+    });
+
+    ws.on("close", () => {
+        clients = clients.filter(c => c !== ws);
+    });
+});
+
+server.listen(3000, () =>
+    console.log("Chat running on http://localhost:3000")
+);
+' > server.js && echo '{}' > package.json && git add . && git commit -m "Initial chat commit" && git push
