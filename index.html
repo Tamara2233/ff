@@ -1,122 +1,213 @@
-gh repo create realtime-russian-chat --public --clone && cd realtime-russian-chat && echo '
-// =========================
-//  ONE-FILE REALTIME CHAT
-//  EVERYTHING TRANSLATED TO RUSSIAN
-//  RUN:  node server.js
-// =========================
-
-const http = require("http");
-const fs = require("fs");
-const fetch = require("node-fetch");
-let clients = [];
-
-const HTML = \`
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<title>Чат (всё переводится на русский)</title>
-<style>
-body { font-family: Arial; background:#f3f3f3; margin:0; }
-#chat { max-width:700px; margin:0 auto; padding:20px; }
-#messages { height:400px; background:white; padding:10px; overflow-y:auto; border:1px solid #ccc; }
-.msg { margin-bottom:10px; padding:5px 8px; background:#eef; border-radius:5px; }
-small { color:#666; }
-#inputBox { display:flex; margin-top:10px; gap:5px; }
-input { flex:1; padding:8px; }
-button { padding:8px 14px; }
-#nick { margin-bottom:10px; width:100%; padding:8px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Логистик Про</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #fff8f0;
+            color: #333;
+        }
+        header {
+            background-color: #f4a261;
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+        header h1 {
+            margin: 0;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #e76f51;
+            padding: 10px 0;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        section {
+            padding: 40px 20px;
+            max-width: 1000px;
+            margin: auto;
+        }
+        h2 {
+            color: #e76f51;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 0;
+            background-color: #f4a261;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background-color: #e76f51;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #f4a261;
+            color: white;
+            position: relative;
+        }
+        #dinoGame {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        canvas {
+            background-color: #fff;
+            border: 1px solid #ccc;
+        }
+        #startBtnSmall {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background-color: #f4a261;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-<div id="chat">
-<h2>Общий чат (всё переводится на русский)</h2>
+    <header>
+        <h1>Логистик Про</h1>
+        <p>Надёжные грузоперевозки и аренда техники в Орехово-Зуево</p>
+    </header>
+    <nav>
+        <a href="#about">О компании</a>
+        <a href="#goals">Цели</a>
+        <a href="#advantages">Преимущества</a>
+        <a href="#contacts">Контакты</a>
+    </nav>
 
-<input id="nick" placeholder="Ваш ник (необязательно)">
+    <section id="about">
+        <h2>О компании</h2>
+        <p>Компания «Логистик Про» уже более 10 лет обеспечивает быстрые и безопасные грузоперевозки по России. Мы также предоставляем в аренду современную грузовую технику для бизнеса любого масштаба.</p>
+    </section>
 
-<div id="messages"></div>
+    <section id="goals">
+        <h2>Наши цели</h2>
+        <ul>
+            <li>Обеспечить клиентам надежную и быструю доставку грузов.</li>
+            <li>Предоставить качественную аренду техники по доступной цене.</li>
+            <li>Развивать логистическую инфраструктуру Орехово-Зуево и региона.</li>
+        </ul>
+    </section>
 
-<div id="inputBox">
-<input id="msg" placeholder="Введите сообщение..." />
-<button onclick="send()">Отправить</button>
-</div>
-</div>
+    <section id="advantages">
+        <h2>Наши преимущества</h2>
+        <ul>
+            <li>Современный автопарк и техника в отличном состоянии.</li>
+            <li>Опытные водители и персонал.</li>
+            <li>Индивидуальный подход к каждому клиенту.</li>
+            <li>Прозрачные цены и удобная система аренды.</li>
+        </ul>
+        <a href="tel:+89770777707" class="btn">Позвонить нам</a>
+        <a href="mailto:info@logisticpro.ru" class="btn">Написать нам</a>
+    </section>
 
-<script>
-const ws = new WebSocket("ws://" + location.host);
+    <section id="contacts">
+        <h2>Контакты</h2>
+        <p>📍 Адрес: Орехово-Зуево, ул. Торфобрикетная, д. 42</p>
+        <p>📞 Телефон: 8-977-077-77-07</p>
+        <p>👤 Директор: Малания М.Т.</p>
+    </section>
 
-ws.onmessage = (ev) => {
-    let m = JSON.parse(ev.data);
-    let box = document.getElementById("messages");
-    box.innerHTML += "<div class='msg'><b>" + m.user + ":</b> " + m.text +
-                     "<br><small>Оригинал: " + m.original + "</small></div>";
-    box.scrollTop = box.scrollHeight;
-};
+    <footer>
+        &copy; 2025 Логистик Про
+    </footer>
 
-function send() {
-    let msg = document.getElementById("msg").value.trim();
-    if (!msg) return;
-    let nick = document.getElementById("nick").value.trim() || "Anonymous";
-    ws.send(JSON.stringify({ user: nick, text: msg }));
-    document.getElementById("msg").value = "";
-}
-</script>
+    <button id="startBtnSmall">▶</button>
 
+    <div id="dinoGame">
+        <h3>Игра "Динозаврик"</h3>
+        <canvas id="gameCanvas" width="600" height="200"></canvas>
+    </div>
+
+    <script>
+        // Показать мини-игру при нажатии
+        const startBtn = document.getElementById('startBtnSmall');
+        const dinoGame = document.getElementById('dinoGame');
+        startBtn.addEventListener('click', () => {
+            dinoGame.style.display = 'block';
+            startBtn.style.display = 'none';
+            startDinoGame();
+        });
+
+        function startDinoGame() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            let dino = {x: 50, y: 150, w: 20, h: 20, vy: 0, gravity: 0.6, jumpPower: -12};
+            let obstacles = [];
+            let frame = 0;
+            let gameOver = false;
+
+            document.addEventListener('keydown', (e) => {
+                if(e.code === 'Space' && dino.y === 150) {
+                    dino.vy = dino.jumpPower;
+                }
+            });
+
+            function loop() {
+                if(gameOver) return;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Dino
+                dino.vy += dino.gravity;
+                dino.y += dino.vy;
+                if(dino.y > 150) { dino.y = 150; dino.vy = 0; }
+                ctx.fillStyle = '#555';
+                ctx.fillRect(dino.x, dino.y, dino.w, dino.h);
+
+                // Obstacles
+                if(frame % 90 === 0) {
+                    obstacles.push({x: canvas.width, y: 150, w: 20, h: 20});
+                }
+                for(let i = obstacles.length-1; i >= 0; i--) {
+                    obstacles[i].x -= 6;
+                    ctx.fillStyle = '#f00';
+                    ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].w, obstacles[i].h);
+
+                    // Collision
+                    if(dino.x < obstacles[i].x + obstacles[i].w &&
+                       dino.x + dino.w > obstacles[i].x &&
+                       dino.y < obstacles[i].y + obstacles[i].h &&
+                       dino.y + dino.h > obstacles[i].y) {
+                        alert('Игра окончена!');
+                        gameOver = true;
+                    }
+
+                    if(obstacles[i].x + obstacles[i].w < 0) obstacles.splice(i, 1);
+                }
+
+                frame++;
+                requestAnimationFrame(loop);
+            }
+            loop();
+        }
+    </script>
 </body>
 </html>
-\`;
-
-async function translateToRussian(text) {
-    try {
-        const res = await fetch("https://libretranslate.com/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                q: text,
-                source: "auto",
-                target: "ru",
-                format: "text"
-            })
-        });
-        const json = await res.json();
-        return json.translatedText || text;
-    } catch {
-        return text;
-    }
-}
-
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(HTML);
-});
-
-const WebSocket = require("ws");
-const wss = new WebSocket.Server({ server });
-
-wss.on("connection", (ws) => {
-    clients.push(ws);
-
-    ws.on("message", async (data) => {
-        const msg = JSON.parse(data.toString());
-        const translated = await translateToRussian(msg.text);
-
-        const payload = JSON.stringify({
-            user: msg.user,
-            original: msg.text,
-            text: translated
-        });
-
-        clients.forEach(c => {
-            if (c.readyState === WebSocket.OPEN) c.send(payload);
-        });
-    });
-
-    ws.on("close", () => {
-        clients = clients.filter(c => c !== ws);
-    });
-});
-
-server.listen(3000, () =>
-    console.log("Chat running on http://localhost:3000")
-);
-' > server.js && echo '{}' > package.json && git add . && git commit -m "Initial chat commit" && git push
